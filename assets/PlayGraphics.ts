@@ -1,4 +1,17 @@
-import { _decorator, Button, Component, EventTouch, Graphics, instantiate, Label, macro, Node, Prefab, ScrollView } from "cc";
+import {
+    _decorator,
+    Button,
+    Component,
+    EventTouch,
+    Graphics,
+    instantiate,
+    Label,
+    macro,
+    Node,
+    Prefab,
+    ScrollView,
+    UITransform,
+} from "cc";
 const { ccclass, property } = _decorator;
 
 /** 案例 */
@@ -16,9 +29,11 @@ const CASES = [
     ["drawArc", "弧形"],
     ["drawEclipse", "椭圆"],
     ["drawCircle", "圆"],
+    ["drawWaitCircle", "转圈"],
     ["drawQuadraticCurve", "三点曲线"],
     ["drawCubicCurve", "四点曲线"],
-    ["drawWaitCircle", "转圈"],
+    ["drawFreeBezier2Curve", "自由三点曲线"],
+    ["drawFreeBezier3Curve", "自由四点曲线"],
 ];
 
 /** 页面 */
@@ -113,6 +128,8 @@ export class PlayGraphics extends Component {
     @property(Graphics)
     Painter: Graphics;
 
+    private _toDeletes: Node[];
+
     start() {
         this.showPage(Page.Main);
         CASES.forEach(([name, label]) => {
@@ -149,6 +166,14 @@ export class PlayGraphics extends Component {
         this.DrawBoard.clear();
         this.Painter.clear();
         this.unscheduleAllCallbacks();
+        this.removeToDeletes();
+    }
+
+    private removeToDeletes() {
+        if (this._toDeletes) {
+            this._toDeletes.forEach((node) => node.destroy());
+            this._toDeletes = null;
+        }
     }
 
     private showCase(event: EventTouch) {
@@ -564,5 +589,144 @@ export class PlayGraphics extends Component {
             0.01,
             macro.REPEAT_FOREVER
         );
+    }
+
+    private drawFreeBezier2Curve() {
+        let px1 = -200,
+            py1 = 0,
+            px2 = 200,
+            py2 = 0,
+            cx1 = 0,
+            cy1 = 200;
+
+        const P = this.Painter;
+        const FILLS = {
+            p1: "#ff0000",
+            c1: "#00ff00",
+            p2: "#0000ff",
+        };
+        P.lineWidth = 4;
+        P.fillColor.fromHEX("#ff00ff");
+
+        const render = () => {
+            P.clear();
+            P.moveTo(px1, py1);
+            P.quadraticCurveTo(cx1, cy1, px2, py2);
+            P.stroke();
+        };
+
+        const createDot = (name: string, x: number, y: number) => {
+            const dot = new Node(name);
+            const ut = dot.addComponent(UITransform);
+            const g = dot.addComponent(Graphics);
+            this.node.addChild(dot);
+            dot.on(
+                Node.EventType.TOUCH_MOVE,
+                (evt: EventTouch) => {
+                    let x = evt.getDeltaX();
+                    let y = evt.getDeltaY();
+                    let { x: dx, y: dy } = dot.getPosition();
+                    dot.setPosition(x + dx, y + dy);
+                    if (name == "p1") {
+                        px1 = x + dx;
+                        py1 = y + dy;
+                    } else if (name == "c1") {
+                        cx1 = x + dx;
+                        cy1 = y + dy;
+                    } else if (name == "p2") {
+                        px2 = x + dx;
+                        py2 = y + dy;
+                    }
+                    render();
+                },
+                this
+            );
+            dot.setPosition(x, y);
+            ut.setContentSize(20, 20);
+            g.fillColor.fromHEX(FILLS[name]);
+            g.circle(0, 0, 10);
+            g.fill();
+            return dot;
+        };
+
+        const p1 = createDot("p1", px1, py1);
+        const c1 = createDot("c1", cx1, cy1);
+        const p2 = createDot("p2", px2, py2);
+        this._toDeletes = [p1, c1, p2];
+
+        render();
+    }
+
+    private drawFreeBezier3Curve() {
+        let px1 = -200,
+            py1 = 0,
+            px2 = 200,
+            py2 = 0,
+            cx1 = -50,
+            cy1 = 200,
+            cx2 = 50,
+            cy2 = 200;
+
+        const P = this.Painter;
+        const FILLS = {
+            p1: "#ff0000",
+            c1: "#00ff00",
+            c2: "#ffff00",
+            p2: "#0000ff",
+        };
+        P.lineWidth = 4;
+        P.strokeColor.fromHEX("#000000");
+
+        const render = () => {
+            P.clear();
+            P.moveTo(px1, py1);
+            P.bezierCurveTo(cx1, cy1, cx2, cy2, px2, py2);
+            P.stroke();
+        };
+
+        const createDot = (name: string, x: number, y: number) => {
+            const dot = new Node(name);
+            const ut = dot.addComponent(UITransform);
+            const g = dot.addComponent(Graphics);
+            this.node.addChild(dot);
+            dot.on(
+                Node.EventType.TOUCH_MOVE,
+                (evt: EventTouch) => {
+                    let x = evt.getDeltaX();
+                    let y = evt.getDeltaY();
+                    let { x: dx, y: dy } = dot.getPosition();
+                    dot.setPosition(x + dx, y + dy);
+                    if (name == "p1") {
+                        px1 = x + dx;
+                        py1 = y + dy;
+                    } else if (name == "c1") {
+                        cx1 = x + dx;
+                        cy1 = y + dy;
+                    } else if (name == "c2") {
+                        cx2 = x + dx;
+                        cy2 = y + dy;
+                    } else if (name == "p2") {
+                        px2 = x + dx;
+                        py2 = y + dy;
+                    }
+                    render();
+                },
+                this
+            );
+            dot.setPosition(x, y);
+            ut.setContentSize(20, 20);
+            g.fillColor.fromHEX(FILLS[name]);
+            g.circle(0, 0, 10);
+            g.fill();
+            return dot;
+        };
+
+        const p1 = createDot("p1", px1, py1);
+        const c1 = createDot("c1", cx1, cy1);
+        const c2 = createDot("c2", cx2, cy2);
+        const p2 = createDot("p2", px2, py2);
+        this._toDeletes = [p1, c1, c2, p2];
+
+        render();
     }
 }
