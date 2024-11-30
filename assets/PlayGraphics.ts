@@ -8,6 +8,7 @@ const CASES = [
     ["drawPolyLine", "折线"],
     ["drawDotLine", "点线"],
     ["drawDashLine", "虚线"],
+    ["drawWaveLine", "波浪线"],
     ["drawTriangle", "三角形"],
     ["drawRect", "矩形"],
     ["drawRoundRect", "圆角矩形"],
@@ -17,6 +18,7 @@ const CASES = [
     ["drawCircle", "圆"],
     ["drawQuadraticCurve", "三点曲线"],
     ["drawCubicCurve", "四点曲线"],
+    ["drawWaitCircle", "转圈"],
 ];
 
 /** 页面 */
@@ -151,11 +153,12 @@ export class PlayGraphics extends Component {
 
     private showCase(event: EventTouch) {
         const draw = event.target.name;
-        this.showPage(Page.Draw, event.target.title);
+        const title = event.target.title;
+        this.showPage(Page.Draw, title);
         this.DrawBoard.clear();
         this.Painter.clear();
         if (this[draw]) {
-            console.log(draw);
+            console.log(title);
             this[draw].call(this);
         }
     }
@@ -503,5 +506,63 @@ export class PlayGraphics extends Component {
             P.fill();
         }
         this.schedule(update, 0.01, macro.REPEAT_FOREVER);
+    }
+
+    private drawWaveLine() {
+        const G = this.DrawBoard;
+        G.lineWidth = 4;
+        G.fillColor.fromHEX("#4680c8");
+        G.strokeColor.fromHEX("#ff00ff");
+
+        let x1 = -100,
+            y1 = 0,
+            x2 = 100,
+            y2 = 0;
+        let w = 16;
+        let px1 = 0,
+            py1 = 0,
+            px2 = 0,
+            py2 = 0,
+            cx = 0,
+            cy = 0;
+        let segments = Math.ceil((x2 - x1) / w);
+        for (let i = 0; i < segments; i++) {
+            px1 = x1 + i * w;
+            px2 = px1 + w;
+            cx = px1 + w / 2;
+            cy = w * 0.618;
+            G.moveTo(px1, py1);
+            G.quadraticCurveTo(cx, cy, px2, py2);
+        }
+        G.stroke();
+
+        G.circle(x1, y1, 2);
+        G.fill();
+        G.circle(x2, y2, 2);
+        G.fill();
+    }
+
+    private drawWaitCircle() {
+        const G = this.DrawBoard;
+        G.lineWidth = 4;
+
+        let rate = 0;
+        this.schedule(
+            () => {
+                rate -= 0.1;
+                if (rate <= 0) {
+                    rate = 2 * Math.PI + rate;
+                }
+                G.clear();
+                G.strokeColor.fromHEX("#3f3f3f");
+                G.arc(0, 0, 24, rate, Math.PI * 0.5 + rate, false);
+                G.stroke();
+                G.strokeColor.fromHEX("#8f8f8f");
+                G.arc(0, 0, 24, rate, Math.PI * 1.5 + rate, true);
+                G.stroke();
+            },
+            0.01,
+            macro.REPEAT_FOREVER
+        );
     }
 }
